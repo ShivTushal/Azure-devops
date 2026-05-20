@@ -1,20 +1,54 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+Project Title
+Multi-Cloud CI/CD Pipeline using Azure DevOps, Docker, AWS EC2 & Azure VM
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+Built a complete CI/CD pipeline using Azure DevOps to automate Docker-based application deployment across AWS and Azure virtual machines.
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+Features
+Automated pipeline trigger on every Git commit
+Docker image build using Dockerfile
+Docker image stored as Azure Pipeline Artifact
+Multi-stage YAML pipeline (Test → Build → Deploy)
+Automated deployment to:
+Amazon EC2
+Microsoft Azure Virtual Machine
+Secure SSH-based remote deployment using Azure Secure Files
+Containerized Flask application deployment on port 5000
+Artifact download and deployment automation using SCP and SSH
+Technologies Used
+Python Flask
+Docker
+Azure DevOps Pipelines
+AWS EC2
+Azure VM
+Linux
+YAML
+SSH
+Git & GitHub
+CI/CD Workflow
+Git Push
+   ↓
+Azure DevOps Pipeline Trigger
+   ↓
+Docker Image Build
+   ↓
+Docker Image Saved as TAR Artifact
+   ↓
+Artifact Published in Azure DevOps
+   ↓
+Artifact Downloaded in Deploy Stage
+   ↓
+Deployment to AWS EC2
+   ↓
+Deployment to Azure VM
+Key Learnings
+CI/CD pipeline automation
+Docker image lifecycle
+Azure Pipeline Artifacts
+SSH-based deployment automation
+Multi-cloud deployment workflow
+YAML pipeline creation
+Secure key handling using Azure Secure Files
+Short Resume Version
+Multi-Cloud CI/CD Pipeline Project
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
-
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+Designed and implemented a multi-stage CI/CD pipeline using Azure DevOps to automate Dockerized Flask application deployment across AWS EC2 and Azure Virtual Machines using SSH, Docker artifacts, and YAML-based automation.
