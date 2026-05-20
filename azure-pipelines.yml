@@ -1,0 +1,176 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  IMAGE_NAME: flask-app
+  IMAGE_TAG: latest
+
+  # AWS EC2
+  AWS_HOST: 15.207.16.103
+  AWS_USER: ubuntu
+
+  # Azure VM
+  AZURE_HOST: 20.2.90.143
+  AZURE_USER: azureuser
+
+stages:
+
+# =========================
+# TEST STAGE
+# =========================
+
+- stage: Test
+
+  jobs:
+
+  - job: RunTests
+
+    steps:
+
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.11'
+
+    - script: |
+        echo "Pipeline successful"
+      displayName: Run Tests
+
+# =========================
+# BUILD STAGE
+# =========================
+
+- stage: Build
+
+  dependsOn: Test
+
+  jobs:
+
+  - job: BuildDockerImage
+
+    steps:
+
+    # Build Docker Image
+    - script: |
+        docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+      displayName: Build Docker Image
+
+    # Save Docker Image as TAR
+    - script: |
+        docker save $(IMAGE_NAME):$(IMAGE_TAG) -o $(IMAGE_NAME).tar
+      displayName: Save Docker Image as TAR
+
+    # Publish Artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(IMAGE_NAME).tar'
+        artifact: docker-image
+      displayName: Publish Docker Artifact
+
+# =========================
+# DEPLOY STAGE
+# =========================
+
+- stage: Deploy
+
+  dependsOn: Build
+
+  jobs:
+
+  - job: DeployToServers
+
+    steps:
+
+    # Download Artifact
+    - task: DownloadPipelineArtifact@2
+      inputs:
+        artifact: docker-image
+        path: $(Pipeline.Workspace)
+      displayName: Download Docker Artifact
+
+    # Download AWS PEM File
+    - task: DownloadSecureFile@1
+      name: awsKey
+      inputs:
+        secureFile: 'test.pem'
+
+    # Download Azure PEM File
+    - task: DownloadSecureFile@1
+      name: azureKey
+      inputs:
+        secureFile: 'azure-devpos_key.pem'
+
+    # Setup SSH Keys
+    - script: |
+        mkdir -p ~/.ssh
+
+        cp $(awsKey.secureFilePath) ~/.ssh/aws.pem
+        cp $(azureKey.secureFilePath) ~/.ssh/azure.pem
+
+        chmod 600 ~/.ssh/aws.pem
+        chmod 600 ~/.ssh/azure.pem
+      displayName: Setup SSH Keys
+
+    # =========================
+    # DEPLOY TO AWS EC2
+    # =========================
+
+    # Copy TAR to AWS EC2
+    - script: |
+        scp -o StrictHostKeyChecking=no \
+        -i ~/.ssh/aws.pem \
+        $(Pipeline.Workspace)/$(IMAGE_NAME).tar \
+        $(AWS_USER)@$(AWS_HOST):/home/ubuntu/
+      displayName: Copy Artifact to AWS EC2
+
+    # Deploy in AWS EC2
+    - script: |
+        ssh -o StrictHostKeyChecking=no \
+        -i ~/.ssh/aws.pem \
+        $(AWS_USER)@$(AWS_HOST) << EOF
+
+        sudo docker stop flask-container || true
+        sudo docker rm flask-container || true
+
+        sudo docker load -i /home/ubuntu/$(IMAGE_NAME).tar
+
+        sudo docker run -d \
+          --name flask-container \
+          -p 5000:5000 \
+          $(IMAGE_NAME):$(IMAGE_TAG)
+
+        EOF
+      displayName: Deploy Container to AWS EC2
+
+    # =========================
+    # DEPLOY TO AZURE VM
+    # =========================
+
+    # Copy TAR to Azure VM
+    - script: |
+        scp -o StrictHostKeyChecking=no \
+        -i ~/.ssh/azure.pem \
+        $(Pipeline.Workspace)/$(IMAGE_NAME).tar \
+        $(AZURE_USER)@$(AZURE_HOST):/home/azureuser/
+      displayName: Copy Artifact to Azure VM
+
+    # Deploy in Azure VM
+    - script: |
+        ssh -o StrictHostKeyChecking=no \
+        -i ~/.ssh/azure.pem \
+        $(AZURE_USER)@$(AZURE_HOST) << EOF
+
+        sudo docker stop flask-container || true
+        sudo docker rm flask-container || true
+
+        sudo docker load -i /home/azureuser/$(IMAGE_NAME).tar
+
+        sudo docker run -d \
+          --name flask-container \
+          -p 5000:5000 \
+          $(IMAGE_NAME):$(IMAGE_TAG)
+
+        EOF
+      displayName: Deploy Container to Azure VM
